@@ -7,18 +7,8 @@ import type { UserFormData } from "../../types/user";
 
 function UserFormPage() {
   const { user, isLogged } = useAuth();
-
-  const [formData, setFormData] = useState<UserFormData>({
-    lastname: "",
-    firstname: "",
-    email: "",
-    street: "",
-    city: "",
-    zip_code: "",
-    country: "",
-    image: "",
-    description: "",
-  });
+  const [userData, setUserData] = useState<UserFormData | null>(null);
+  const [previewImage, setPreviewImage] = useState<string>();
 
   useEffect(() => {
     if (!user) return;
@@ -32,17 +22,7 @@ function UserFormPage() {
         return response.json();
       })
       .then((data) => {
-        setFormData({
-          lastname: data.lastname || "",
-          firstname: data.firstname || "",
-          email: data.email || "",
-          street: data.street || "",
-          city: data.city || "",
-          zip_code: data.zip_code || "",
-          country: data.country || "",
-          image: data.image || "",
-          description: data.description || "",
-        });
+        setUserData(data);
       })
       .catch((error) => {
         console.error(error);
@@ -50,40 +30,25 @@ function UserFormPage() {
       });
   }, [user]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, type, value, files } = e.target as HTMLInputElement;
-    if (type === "file" && files) {
-      if (files[0].size > 500 * 1024) {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024) {
         toast.error("La taille de l'image ne doit pas être supérieur à 500ko");
+        e.target.value = "";
+        setPreviewImage(undefined);
         return;
       }
-      setFormData((prevFormData) => ({
-        ...prevFormData,
-        image: files[0],
-      }));
-    } else {
-      setFormData((prevFormData) => ({
-        ...prevFormData,
-        [name]: value,
-      }));
+      setPreviewImage(URL.createObjectURL(file));
     }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
-    const data = new FormData();
-    for (const [key, value] of Object.entries(formData)) {
-      if (key === "image" && value instanceof File) {
-        data.append("image", value);
-      } else if (key !== "image" && value !== "") {
-        data.append(key, value as string);
-      } else if (key === "image" && typeof value === "string" && value !== "") {
-        data.append("image", value);
-      }
-    }
+
+    const data = new FormData(e.currentTarget);
+
     fetch(`http://localhost:3310/api/user/${user.id}`, {
       method: "PUT",
       credentials: "include",
@@ -115,13 +80,17 @@ function UserFormPage() {
     );
   }
 
+  if (!userData) {
+    return null;
+  }
+
   return (
     <>
       <main className="user-form-main">
         <section>
           <img src="/img/contact.png" alt="contact" />
           <figcaption>
-            {formData.firstname} {formData.lastname}
+            {userData.firstname} {userData.lastname}
           </figcaption>
 
           <form onSubmit={handleSubmit}>
@@ -132,8 +101,7 @@ function UserFormPage() {
               type="text"
               placeholder="ex: Dupont"
               name="lastname"
-              value={formData.lastname}
-              onChange={handleChange}
+              defaultValue={userData.lastname}
             />
 
             <label htmlFor="firstname">Prénom</label>
@@ -141,8 +109,7 @@ function UserFormPage() {
               name="firstname"
               type="text"
               placeholder="ex: Jean"
-              value={formData.firstname}
-              onChange={handleChange}
+              defaultValue={userData.firstname}
             />
 
             <label htmlFor="email">Email</label>
@@ -150,8 +117,7 @@ function UserFormPage() {
               type="email"
               placeholder="ex: jean.dupont@example.com"
               name="email"
-              value={formData.email}
-              onChange={handleChange}
+              defaultValue={userData.email}
             />
 
             <input
@@ -159,27 +125,25 @@ function UserFormPage() {
               name="image"
               accept="image/png, image/jpg, image/jpeg"
               id="user-image"
-              onChange={handleChange}
+              onChange={handleFileChange}
             />
             <label htmlFor="user-image" className="file-label">
               Choisir une image
             </label>
-            <img
-              src={
-                formData.image instanceof File
-                  ? URL.createObjectURL(formData.image)
-                  : `http://localhost:3310/${formData.image}`
-              }
-              alt="Illustration"
-            />
+            {previewImage ? (
+              <img src={previewImage} alt="Prévisualisation" />
+            ) : (
+              userData.image && (
+                <img src={`http://localhost:3310/${userData.image}`} alt="Illustration" />
+              )
+            )}
 
             <label htmlFor="description">Description</label>
             <textarea
               rows={5}
               placeholder="ex: Passionné d'art contemporain..."
               name="description"
-              value={formData.description}
-              onChange={handleChange}
+              defaultValue={userData.description}
             />
 
             <h2>Mon Adresse</h2>
@@ -189,8 +153,7 @@ function UserFormPage() {
               type="text"
               placeholder="ex: 123 rue de Paris"
               name="street"
-              value={formData.street}
-              onChange={handleChange}
+              defaultValue={userData.street}
             />
 
             <label htmlFor="city">Ville</label>
@@ -198,8 +161,7 @@ function UserFormPage() {
               type="text"
               placeholder="ex: Paris"
               name="city"
-              value={formData.city}
-              onChange={handleChange}
+              defaultValue={userData.city}
             />
 
             <label htmlFor="zip_code">Code Postal</label>
@@ -207,8 +169,7 @@ function UserFormPage() {
               type="text"
               placeholder="ex: 75000"
               name="zip_code"
-              value={formData.zip_code}
-              onChange={handleChange}
+              defaultValue={userData.zip_code}
             />
 
             <label htmlFor="country">Pays</label>
@@ -216,8 +177,7 @@ function UserFormPage() {
               type="text"
               placeholder="ex: France"
               name="country"
-              value={formData.country}
-              onChange={handleChange}
+              defaultValue={userData.country}
             />
 
             <button type="submit">Valider</button>
