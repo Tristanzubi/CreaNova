@@ -37,6 +37,8 @@ Développement d'une fonctionnalité permettant aux utilisateurs connectés de m
 
 ### 📸 CAPTURE 1 : État initial
 
+Pour gérer ce formulaire, j'ai mis en place deux états React distincts : `userData` qui stocke les données récupérées depuis la base de données, et `previewImage` qui permet d'afficher un aperçu de l'image sélectionnée avant l'upload. L'utilisation du hook personnalisé `useAuth()` me permet d'accéder facilement aux informations de l'utilisateur connecté depuis n'importe quel composant.
+
 **Fichier :** `client/src/pages/UserFormPage/UserFormPage.tsx` (lignes 8-12)
 
 ```typescript
@@ -46,16 +48,13 @@ function UserFormPage() {
   const [previewImage, setPreviewImage] = useState<string>();
 ```
 
-**💡 Explication :**
-- État : `userData` (données BDD) + `previewImage` (aperçu image)
-- Hook personnalisé `useAuth()` pour récupérer l'utilisateur connecté
-- Typage TypeScript strict avec l'interface `UserFormData`
-
 **→ Voir Annexe - Capture 1**
 
 ---
 
 ### 📸 CAPTURE 2 : Récupération et pré-remplissage
+
+Dès le chargement de la page, j'utilise un `useEffect` pour récupérer automatiquement les données de l'utilisateur connecté. L'option `credentials: "include"` est essentielle car elle envoie le cookie JWT avec la requête, permettant au serveur d'authentifier l'utilisateur. Les données récupérées sont ensuite stockées dans l'état pour pré-remplir le formulaire, offrant une expérience fluide où l'utilisateur voit immédiatement ses informations actuelles.
 
 **Fichier :** `client/src/pages/UserFormPage/UserFormPage.tsx` (lignes 14-31)
 
@@ -79,17 +78,13 @@ useEffect(() => {
 }, [user]);
 ```
 
-**💡 Explication :**
-- Hook `useEffect` exécuté au montage du composant
-- Appel API GET avec `credentials: "include"` pour envoyer le JWT
-- Assignation directe des données dans l'état
-- Gestion d'erreur avec toast
-
 **→ Voir Annexe - Captures 2a et 2b**
 
 ---
 
 ### 📸 CAPTURE 3 : Validation upload d'image
+
+La gestion de l'upload d'image de profil nécessite une validation côté client pour garantir une bonne performance. J'ai implémenté une vérification de la taille du fichier (limite à 500ko) qui évite d'envoyer des images trop volumineuses au serveur. Si la validation échoue, le champ est réinitialisé et un message d'erreur s'affiche via un toast. Dans le cas contraire, `URL.createObjectURL()` génère instantanément une prévisualisation de l'image sélectionnée.
 
 **Fichier :** `client/src/pages/UserFormPage/UserFormPage.tsx` (lignes 33-44)
 
@@ -108,16 +103,13 @@ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 };
 ```
 
-**💡 Explication :**
-- Validation côté client : taille max 500ko
-- `URL.createObjectURL()` pour prévisualisation instantanée
-- Gestion d'erreur avec toast et réinitialisation du champ
-
 **→ Voir Annexe - Capture 3**
 
 ---
 
 ### 📸 CAPTURE 4 : Soumission du formulaire
+
+La soumission du formulaire utilise l'API FormData native qui récupère automatiquement toutes les valeurs des inputs grâce à leur attribut `name`. Cela simplifie considérablement le code en évitant de gérer chaque champ individuellement. La requête PUT est envoyée avec le JWT (via `credentials: "include"`) pour authentifier l'utilisateur. Un système de toasts informe immédiatement l'utilisateur du succès ou de l'échec de l'opération.
 
 **Fichier :** `client/src/pages/UserFormPage/UserFormPage.tsx` (lignes 46-68)
 
@@ -147,16 +139,13 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 };
 ```
 
-**💡 Explication :**
-- `new FormData(e.currentTarget)` récupère automatiquement toutes les valeurs du formulaire
-- Requête PUT avec JWT (cookies)
-- Feedback immédiat via toasts (succès/erreur)
-
 **→ Voir Annexe - Captures 4a, 4b et 4c**
 
 ---
 
 ### 📸 CAPTURE 5 : Formulaire HTML
+
+J'ai conçu un formulaire non contrôlé utilisant `defaultValue` plutôt que `value`, ce qui permet de pré-remplir les champs tout en laissant React gérer les performances de manière optimale. Chaque input possède un attribut `name` correspondant exactement aux clés attendues par le back-end, ce qui rend le code plus maintenable et évite les erreurs de mapping. Le formulaire couvre toutes les informations personnelles : nom, prénom, email, adresse complète et description.
 
 **Fichier :** `client/src/pages/UserFormPage/UserFormPage.tsx` (lignes 101-183)
 
@@ -191,11 +180,6 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 </form>
 ```
 
-**💡 Explication :**
-- `defaultValue` pour pré-remplir les champs
-- Attribut `name` sur chaque input permet à FormData de récupérer les valeurs automatiquement
-- Formulaire non contrôlé
-
 **→ Voir Annexe - Capture 5**
 
 ---
@@ -204,6 +188,8 @@ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 
 ### 📸 CAPTURE 6 : Routes API
 
+Côté back-end, j'ai configuré deux routes RESTful distinctes suivant les conventions HTTP : GET pour récupérer les données et PUT pour les mettre à jour. Les routes utilisent des paramètres dynamiques (`:id`) pour identifier l'utilisateur concerné. Cette séparation claire respecte l'architecture MVC et facilite la maintenance du code.
+
 **Fichier :** `server/src/router.ts` (lignes 80-86)
 
 ```typescript
@@ -211,16 +197,13 @@ router.get("/api/user/:id", userActions.getUserById);
 router.put("/api/user/:id", userActions.editUser);
 ```
 
-**💡 Explication :**
-- Route GET : récupération des données utilisateur par ID
-- Route PUT : mise à jour des données utilisateur
-- Architecture modulaire avec contrôleurs séparés
-
 **→ Voir Annexe - Capture 6**
 
 ---
 
 ### 📸 CAPTURE 7 : Contrôleur - Récupération
+
+Le contrôleur `getUserById` implémente une validation rigoureuse avant d'interroger la base de données. Je convertis d'abord l'ID en nombre et vérifie sa validité. Si l'utilisateur n'existe pas, un code HTTP 404 est retourné. Cette gestion précise des cas d'erreur améliore la robustesse de l'API et facilite le débogage côté front-end grâce à des codes HTTP explicites.
 
 **Fichier :** `server/src/modules/user/userActions.ts` (lignes 66-83)
 
@@ -245,17 +228,13 @@ const getUserById: RequestHandler = async (req, res, next) => {
 };
 ```
 
-**💡 Explication :**
-- Validation de l'ID (conversion en nombre)
-- Appel au repository pour lecture en base de données
-- Gestion des codes HTTP appropriés (400, 404, 200)
-- Try/catch pour propagation des erreurs au middleware global
-
 **→ Voir Annexe - Capture 7**
 
 ---
 
 ### 📸 CAPTURE 8 : Contrôleur - Mise à jour
+
+Le contrôleur `editUser` suit la même logique de validation que `getUserById`, mais effectue ensuite un UPDATE en base de données. L'utilisation de `affectedRows` permet de vérifier si l'utilisateur existait réellement : si aucune ligne n'est affectée, cela signifie que l'ID est invalide. Le repository gère la requête SQL, respectant ainsi la séparation des responsabilités de l'architecture MVC.
 
 **Fichier :** `server/src/modules/user/userActions.ts` (lignes 47-65)
 
@@ -280,12 +259,6 @@ const editUser: RequestHandler = async (req, res, next) => {
   }
 };
 ```
-
-**💡 Explication :**
-- Validation des paramètres d'URL
-- Appel au repository pour UPDATE MySQL
-- Vérification de l'existence de l'utilisateur (`affectedRows`)
-- Réponse claire pour le front-end
 
 **→ Voir Annexe - Capture 8**
 
@@ -363,6 +336,28 @@ Screenshot du fichier `userActions.ts` montrant la fonction `editUser` (lignes 4
 **Front-end :** React 19 + TypeScript + React Router v7 + React-Toastify
 **Back-end :** Express + TypeScript + MySQL2
 **Authentification :** JWT (cookies httpOnly)
+
+---
+
+## 💭 RESSENTI PERSONNEL
+
+Cette fonctionnalité a été ma première vraie immersion dans la gestion de formulaires complexes avec React et TypeScript. Au début, j'ai hésité entre utiliser un formulaire contrôlé ou non contrôlé, et j'ai finalement opté pour `defaultValue` qui offrait le meilleur compromis entre simplicité et performance.
+
+**Défis rencontrés :**
+Le principal défi a été de comprendre le cycle de vie de React avec `useEffect` pour récupérer les données au bon moment. J'ai également dû apprendre à gérer l'asynchronicité entre la récupération des données et l'affichage du formulaire. La gestion de l'upload d'image avec prévisualisation a nécessité de découvrir l'API `URL.createObjectURL()`, que je ne connaissais pas auparavant.
+
+**Apprentissages clés :**
+Cette réalisation m'a permis de maîtriser plusieurs concepts fondamentaux :
+- La **communication front-back** avec authentification JWT via cookies
+- L'utilisation de **FormData** pour gérer simplement les formulaires avec fichiers
+- La **gestion d'état asynchrone** avec useEffect et les bonnes pratiques React
+- L'importance du **feedback utilisateur** avec des toasts pour une meilleure UX
+- La **validation côté client** pour optimiser les performances et l'expérience utilisateur
+
+**Satisfaction :**
+Je suis particulièrement fier de la fluidité de l'expérience utilisateur : le pré-remplissage automatique, la prévisualisation instantanée de l'image, et les retours immédiats via les toasts créent une interface intuitive et réactive. Côté technique, l'utilisation de `defaultValue` et FormData rend le code très maintenable et facile à étendre si de nouveaux champs doivent être ajoutés.
+
+Cette fonctionnalité m'a donné confiance dans ma capacité à créer des interfaces utilisateur complètes et à gérer l'ensemble du cycle de vie d'une requête HTTP de bout en bout.
 
 ---
 
